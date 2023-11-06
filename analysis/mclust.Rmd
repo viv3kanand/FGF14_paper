@@ -1,0 +1,74 @@
+---
+title: "Test"
+author: "viv3kanand"
+date: "2023-11-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(mclust) # For fitting GMM
+```
+
+```{r}
+df <- read.table("../data/out/barcode13.hg19.strique.tsv", header = TRUE)
+
+df %>% filter(count != 0 & score_prefix >=4 & score_suffix >= 4) -> df
+
+fit <- Mclust(df$count, G = 3)
+
+prob <- predict(fit)
+
+df$allele <- apply(prob$z, 1, which.max)
+df$id <- str_remove(basename("../data/out/barcode63.hg19.strique.tsv"), ".hg19.strique.tsv")
+
+mode_df <- df %>%
+  group_by(id, allele) %>%
+  summarise(mode_repeat = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
+            freq = n())
+
+mode_df
+
+ggplot(df, aes(x = count, fill = factor(allele))) +
+    geom_density(alpha = 0.5) +
+    scale_fill_manual(values = c("red", "blue", "green")) +
+    theme_minimal() +
+    geom_vline(xintercept = c(mode_df$mode_repeat[2], mode_df$mode_repeat[3]), linetype = "dashed")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
