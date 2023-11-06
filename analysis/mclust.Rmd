@@ -77,10 +77,11 @@ process_file <- function(file_path) {
   return(mode_df)
 }
 
-for (file_path in file_paths) {
-  mode_df <- process_file(file_path)
-  result_df <- rbind(result_df, mode_df)
-}
+result_df <- lapply(file_paths, function(file_path){
+  process_file(file_path)
+}) %>% 
+  Reduce(function(...) merge(..., all=T), .) %>% 
+  pivot_wider(names_from = allele, values_from = c(repeat_count, freq))
 
 result_df <- result_df %>% pivot_wider(names_from = allele, values_from = c(repeat_count, freq))
 
