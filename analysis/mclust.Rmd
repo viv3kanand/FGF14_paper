@@ -15,34 +15,43 @@ library(mclust) # For fitting GMM
 ```
 
 ```{r}
-df <- read.table("../data/out/barcode13.hg19.strique.tsv", header = TRUE)
+file <- "../data/out/barcode13.hg19.strique.tsv"
 
-df %>% filter(count != 0 & score_prefix >=4 & score_suffix >= 4) -> df
+df <- read.table(file, header = TRUE)
 
-fit <- Mclust(df$count, G = 3)
+df %>% filter(count > 3 & score_prefix >=4 & score_suffix >= 4) -> df
+
+fit <- Mclust(df$count)
 
 prob <- predict(fit)
 
 df$allele <- apply(prob$z, 1, which.max)
-df$id <- str_remove(basename("../data/out/barcode63.hg19.strique.tsv"), ".hg19.strique.tsv")
+df$id <- str_remove(basename(file), ".hg19.strique.tsv")
 
 mode_df <- df %>%
-  group_by(id, allele) %>%
-  summarise(mode_repeat = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
-            freq = n())
+    group_by(id, allele) %>%
+    summarise(allele_freq = n(),
+              mode_repeat = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
+              repeat_freq = max(table(count)))
 
 mode_df
 
+
+```
+
+```{r}
 ggplot(df, aes(x = count, fill = factor(allele))) +
     geom_density(alpha = 0.5) +
     scale_fill_manual(values = c("red", "blue", "green")) +
     theme_minimal() +
     geom_vline(xintercept = c(mode_df$mode_repeat[2], mode_df$mode_repeat[3]), linetype = "dashed")
-
 ```
 
 
+
 ```{r}
+#14, 38, 61, 63
+
 FGF14 <- read.csv("../data/FGF14-sample data.csv")
 
 file_paths <- list.files("../data/out/", full.names = TRUE)
@@ -53,26 +62,24 @@ process_file <- function(file_path) {
   df <- read.table(file_path, header = TRUE)
   
   df_filtered <- df %>%
-    filter(count != 0, score_prefix >= 4, score_suffix >= 4) %>% 
+    filter(count > 3, score_prefix >= 4, score_suffix >= 4) %>% 
     mutate(id = str_remove(basename(file_path), ".hg19.strique.tsv"))
   
-  fit <- Mclust(df_filtered$count, G = 3)
+  fit <- Mclust(df_filtered$count, G = 2)
   prob <- predict(fit)
   
   df_filtered$allele <- apply(prob$z, 1, which.max)
   
   mode_df <- df_filtered %>%
-    filter(allele != 1) %>% 
     group_by(id, allele) %>%
     summarise(
       repeat_count = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
-      freq = n(),
+      freq = max(table(count)),
       .groups = 'drop'
     ) %>% 
-    mutate(allele = case_when(allele == 2 ~ "A1",
-                              allele == 3 ~ "A2"),
-           read_count = dim(df)[1],
-           repeat_count = ifelse(repeat_count == 3, paste0(repeat_count, " (noise)"), repeat_count))
+    mutate(allele = case_when(allele == 1 ~ "A1",
+                              allele == 2 ~ "A2"),
+           read_count = dim(df)[1])
   
   return(mode_df)
 }
@@ -82,8 +89,6 @@ result_df <- lapply(file_paths, function(file_path){
 }) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
   pivot_wider(names_from = allele, values_from = c(repeat_count, freq))
-
-result_df <- result_df %>% pivot_wider(names_from = allele, values_from = c(repeat_count, freq))
 
 result_df <- merge(FGF14, result_df, by.x = "barcode", by.y = "id")
 
