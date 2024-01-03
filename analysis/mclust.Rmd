@@ -87,8 +87,7 @@ process_file <- function(file_path) {
       prop = repeat_freq/allele_freq,
       .groups = 'drop'
     ) %>% 
-    arrange(desc(allele_freq)) %>%
-    mutate(allele_ref = seq.int(nrow(.)))
+    arrange(desc(allele_freq))
 
   return(mode_df)
 }
@@ -96,8 +95,8 @@ process_file <- function(file_path) {
 result_df <- lapply(file_paths, function(file_path){
   process_file(file_path)
 }) %>% 
-  Reduce(function(...) merge(..., all=T), .) %>% select(-c(2)) %>% 
-  pivot_wider(names_from = allele_ref, values_from = c(mode_repeat, repeat_freq, allele_freq, prop))
+  Reduce(function(...) merge(..., all=T), .) %>% 
+  pivot_wider(names_from = allele_ref, values_from = c(mode_repeat, repeat_freq, allele, prop))
 
 result_df <- merge(FGF14, result_df, by.x = "barcode", by.y = "id")
 
