@@ -96,7 +96,7 @@ result_df <- lapply(file_paths, function(file_path){
   process_file(file_path)
 }) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
-  pivot_wider(names_from = allele_ref, values_from = c(mode_repeat, repeat_freq, allele, prop))
+  pivot_wider(names_from = allele, values_from = c(mode_repeat, repeat_freq, allele, prop))
 
 result_df <- merge(FGF14, result_df, by.x = "barcode", by.y = "id")
 
