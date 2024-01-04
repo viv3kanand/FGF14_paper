@@ -145,20 +145,33 @@ clusters <- list(barcode13 = c(3,5),
 df_subset <- df_filtered[names(clusters)]
 
 lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcode){
-    df_subset[[barcode]] %>% filter(allele %in% clusters[[barcode]])
+    df_subset[[barcode]] %>% 
+    filter(allele %in% clusters[[barcode]]) %>% 
+    group_by(allele) %>% 
+    mutate(allele_ref = paste0("allele_", cur_group_id()),
+           mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
+           flanking = case_when(count <= mode & count >= mode-20 ~ "yes",
+                                count >= mode & count <= mode+20 ~ "yes",
+                                TRUE ~ "no")) %>% 
+    ungroup()
 }) -> df_subset
+
+
+
+
+
+
+
 
 
 
 lapply(df_subset, function(df){
   df %>% 
-    group_by(id, allele) %>% 
+    group_by(id, allele_ref) %>% 
     summarise(mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])), .groups = 'drop')
 }) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
-  group_by(id) %>% 
-  mutate(allele = paste0("allele_", row_number())) %>% 
-  pivot_wider(names_from = allele, values_from = mode) -> mode_df
+  pivot_wider(names_from = allele_ref, values_from = mode) -> mode_df
 
 
 ```
