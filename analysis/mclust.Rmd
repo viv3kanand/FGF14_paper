@@ -19,12 +19,19 @@ library(mclust) # For fitting GMM
 ```
 
 ```{r}
-file <- "../data/out/barcode14.hg19.strique.tsv"
+file1 <- "../data/out/barcode03.hg19.strique.tsv"
+file2 <- "../data/out/barcode86.hg19.strique.tsv"
 
-df <- read.table(file, header = TRUE)
+df1 <- read.table(file1, header = TRUE)
+df2 <- read.table(file2, header = TRUE)
+
+df <- rbind(df1,df2)
+
+#file <- "../data/out/barcode02.hg19.strique.tsv"
+#df <- read.table(file, header = TRUE)
 
 df %>% filter(count > 3 & score_prefix >= 4 & score_suffix >= 4) -> df
-
+set.seed(666)
 fit <- Mclust(df$count)
 
 prob <- predict(fit)
@@ -92,23 +99,30 @@ process_file <- function(file_path) {
   return(mode_df)
 }
 
+# df_filtered <- lapply(setNames(file_paths, str_remove(basename(file_paths), ".hg19.strique.tsv")), function(file_path){
+#   process_file(file_path)
+# })
+
 result_df <- lapply(file_paths, function(file_path){
   process_file(file_path)
 }) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
-  pivot_wider(names_from = allele, values_from = c(mode_repeat, repeat_freq, allele, prop))
+  pivot_wider(names_from = allele, values_from = c(mode_repeat, repeat_freq, allele_freq, prop))
 
 result_df <- merge(FGF14, result_df, by.x = "barcode", by.y = "id")
 
 #result_df %>% select(barcode, PCR.LA., PCR.UA., repeat_count_A1, repeat_count_A2) %>% View
 
-write.csv(result_df, paste0("results/", Sys.Date(), "FGF14_result.csv"))
+write.csv(result_df, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
 
 
 ```
 
 
+### Interruptions
+```{r}
 
+```
 
 
 
