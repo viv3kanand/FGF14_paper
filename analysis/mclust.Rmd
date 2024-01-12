@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(mclust) # For fitting GMM
-
+library(openxlsx)
 ### Evaluating clusters
 #renv::install("ramey/clusteval")
 #renv::install("factoextra")
@@ -63,8 +63,6 @@ ggplot(df, aes(x = count, fill = factor(allele))) +
 
 
 ```{r}
-#14, 38, 61, 63
-
 FGF14 <- read.csv("../data/FGF14-sample data.csv")
 
 file_paths <- list.files("../data/out/", full.names = TRUE)
@@ -96,24 +94,28 @@ process_file <- function(file_path) {
     ) %>% 
     arrange(desc(allele_freq))
 
-  return(mode_df)
+  return(list(mode = mode_df, df = df_filtered))
 }
 
-# df_filtered <- lapply(setNames(file_paths, str_remove(basename(file_paths), ".hg19.strique.tsv")), function(file_path){
-#   process_file(file_path)
-# })
+result_list <- lapply(
+  setNames(file_paths, str_remove(basename(file_paths), ".hg19.strique.tsv")), 
+  function(file_path){
+    process_result <- process_file(file_path)
+    return(process_result)
+})
 
-result_df <- lapply(file_paths, function(file_path){
-  process_file(file_path)
-}) %>% 
+result_df <- lapply(result_list, function(result) result$df)
+
+
+result_mode <- lapply(result_list, function(result) result$mode) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
   pivot_wider(names_from = allele, values_from = c(mode_repeat, repeat_freq, allele_freq, prop))
 
-result_df <- merge(FGF14, result_df, by.x = "barcode", by.y = "id")
 
-#result_df %>% select(barcode, PCR.LA., PCR.UA., repeat_count_A1, repeat_count_A2) %>% View
+result_mode <- merge(FGF14, result_mode, by.x = "barcode", by.y = "id")
 
-write.csv(result_df, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
+
+write.csv(result_mode, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
 
 
 ```
@@ -142,7 +144,7 @@ clusters <- list(barcode13 = c(3,5),
                  barcode85 = c(2,5))
 
 #subset clusters from df_filtered
-df_subset <- df_filtered[names(clusters)]
+df_subset <- result_df[names(clusters)]
 
 lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcode){
     df_subset[[barcode]] %>% 
@@ -150,21 +152,40 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
     group_by(allele) %>% 
     mutate(allele_ref = paste0("allele_", cur_group_id()),
            mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
-           flanking = case_when(count <= mode & count >= mode-20 ~ "yes",
-                                count >= mode & count <= mode+20 ~ "yes",
-                                TRUE ~ "no")) %>% 
+           flanking = case_when(count <= mode & count >= mode-20 ~ "upstream",
+                                count >= mode & count <= mode+20 ~ "downstream",
+                                count >= max(count)-20 ~ "max",
+                                TRUE ~ "NA")) %>% 
     ungroup()
 }) -> df_subset
 
 
 
 
+lapply(df_subset, function(df){
+  name <- df$id %>% unique()
+  
+  df_a1 <- df %>% 
+    filter(allele_ref == "allele_1" & flanking %in% c("upstream", "downstream")) %>% 
+    select(ID)
+  
+  df_a2 <- df %>% 
+    filter(allele_ref == "allele_2" & flanking %in% c("upstream", "downstream")) %>% 
+    select(ID)
+  
+  write_csv(df_a1, file = paste0("results/A1/", name))
+  write_csv(df_a2, file = paste0("results/A2/", name))
+})
 
 
 
 
 
 
+
+
+
+## summary of the cluster distribution
 lapply(df_subset, function(df){
   df %>% 
     group_by(id, allele_ref) %>% 
