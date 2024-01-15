@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mclust) # For fitting GMM
 library(openxlsx)
+library(ComplexHeatmap)
 ### Evaluating clusters
 #renv::install("ramey/clusteval")
 #renv::install("factoextra")
@@ -141,13 +142,12 @@ clusters <- list(barcode13 = c(3,5),
                  barcode73 = c(2,4),
                  barcode74 = c(2,3),
                  barcode75 = c(2,4),
-                 barcode85 = c(2,5))
+                 barcode85 = c(2,5),
+                 barcode87 = c(2,6))
 
-#subset clusters from df_filtered
-df_subset <- result_df[names(clusters)]
-
+# subset clusters from result_df with upstream and downstream from mode (+20 | -20)
 lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcode){
-    df_subset[[barcode]] %>% 
+    result_df[names(clusters)][[barcode]] %>% 
     filter(allele %in% clusters[[barcode]]) %>% 
     group_by(allele) %>% 
     mutate(allele_ref = paste0("allele_", cur_group_id()),
@@ -161,7 +161,7 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
 
 
 
-
+# subset fastq id for 
 lapply(df_subset, function(df){
   name <- df$id %>% unique()
   
@@ -179,13 +179,17 @@ lapply(df_subset, function(df){
 
 
 
+# subset special cases
+result_df[c("barcode01", "barcode02", "barcode04", "barcode86")]
 
 
 
+```
 
 
-
-## summary of the cluster distribution
+### Figure
+```{r}
+# summary of the cluster distribution
 lapply(df_subset, function(df){
   df %>% 
     group_by(id, allele_ref) %>% 
@@ -195,9 +199,41 @@ lapply(df_subset, function(df){
   pivot_wider(names_from = allele_ref, values_from = mode) -> mode_df
 
 
+df_merged <- df_subset %>% Reduce(function(...) merge(..., all=T), .)
+
+
+ggplot(df_merged, aes(x = count, fill = factor(allele_ref))) +
+    geom_density(alpha = 0.5) +
+    scale_fill_manual(values = c("red", "blue")) +
+    theme_minimal() + 
+    facet_wrap(~id, scales = "free")
+
+
+
+
+# Heatmap of all clusters
+heatmap_dat <- result_df %>% 
+  Reduce(function(...) merge(..., all=T), .) %>% 
+  group_by(id, count) %>%
+  summarise(freq = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = count, values_from = freq) %>% 
+  tibble::column_to_rownames("id")
+
+mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)))
+
+
+col_fun = colorRamp2(c(-3, 5), c("white", "red"))
+
+
+Heatmap(mat[,order(as.numeric(as.character(colnames(mat))))], 
+        cluster_rows = FALSE, 
+        cluster_columns = FALSE, 
+        col = col_fun)
+
+
+
+
 ```
-
-
 
 
 
