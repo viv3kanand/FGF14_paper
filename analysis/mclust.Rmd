@@ -221,14 +221,22 @@ heatmap_dat <- result_df %>%
 
 mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)))
 
+mat <- mat[,order(as.numeric(as.character(colnames(mat))))]
 
 col_fun = colorRamp2(c(-3, 5), c("white", "red"))
 
+num_bins = 50
+ha = rowAnnotation(foo = anno_mark(at = seq(1, ncol(mat) + num_bins, by = num_bins), 
+                                   labels = colnames(mat)[seq(1, ncol(mat) + num_bins, by = num_bins)]))
 
-Heatmap(mat[,order(as.numeric(as.character(colnames(mat))))], 
-        cluster_rows = FALSE, 
-        cluster_columns = FALSE, 
-        col = col_fun)
+
+ComplexHeatmap::Heatmap(t(mat), 
+                        cluster_rows = FALSE, 
+                        cluster_columns = FALSE,
+                        col = col_fun,
+                        right_annotation = ha,
+                        row_labels = FALSE,
+                        show_row_names = FALSE)
 
 
 
