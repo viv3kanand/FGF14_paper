@@ -161,7 +161,7 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
 
 
 
-# subset fastq id for 
+# subset fastq id for fetching sequence
 lapply(df_subset, function(df){
   name <- df$id %>% unique()
   
@@ -180,7 +180,7 @@ lapply(df_subset, function(df){
 
 
 # subset special cases
-result_df[c("barcode01", "barcode02", "barcode04", "barcode86")]
+result_df[c("barcode01", "barcode02", "barcode03", "barcode04", "barcode86")]
 
 
 
@@ -223,24 +223,42 @@ mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE)
 
 mat <- mat[,order(as.numeric(as.character(colnames(mat))))]
 
-col_fun = colorRamp2(c(-3, 5), c("white", "red"))
+col_fun = colorRamp2(c(-2, 5), c("white", "red"))
 
 num_bins = 50
-ha = rowAnnotation(foo = anno_mark(at = seq(1, ncol(mat) + num_bins, by = num_bins), 
-                                   labels = colnames(mat)[seq(1, ncol(mat) + num_bins, by = num_bins)]))
+ha = columnAnnotation(
+  foo = anno_mark(
+    at = seq(1, ncol(mat) + num_bins, by = num_bins),
+    labels = colnames(mat)[seq(1, ncol(mat) + num_bins, by = num_bins)]))
+
+# breaks <- mode_df %>%
+#   pivot_longer(cols = c("allele_1", "allele_2")) %>%
+#   pull(value) %>%
+#   sort %>%
+#   unique()
+
+# ha =columnAnnotation(foo = anno_mark(
+#   at = c(10,25,60,85,112,123,137,246,270,295,321,366,404,428), 
+#   labels = c(10,25,60,85,112,123,137,246,270,295,321,366,404,428)))
 
 
-ComplexHeatmap::Heatmap(t(mat), 
-                        cluster_rows = FALSE, 
-                        cluster_columns = FALSE,
-                        col = col_fun,
-                        right_annotation = ha,
-                        row_labels = FALSE,
-                        show_row_names = FALSE)
+heatmap <- ComplexHeatmap::Heatmap(mat,
+                                   na_col = "white",
+                                   cluster_rows = FALSE, 
+                                   cluster_columns = FALSE,
+                                   col = col_fun,
+                                   top_annotation = ha,
+                                   row_split = 1:25,
+                                   row_title = NULL,
+                                   row_names_side = "left",
+                                   show_row_names = TRUE,
+                                   show_column_names = FALSE,
+                                   name = "z-score")
 
 
-
-
+png("figures/heatmap.png", width = 10, height = 8, units = "in", res = 300)
+draw(heatmap)
+dev.off()
 ```
 
 
