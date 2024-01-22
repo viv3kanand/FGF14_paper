@@ -159,7 +159,9 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
            mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
            flanking = case_when(count <= mode & count >= mode-20 ~ "upstream",
                                 count >= mode & count <= mode+20 ~ "downstream",
-                                count >= max(count)-20 ~ "max",
+                                TRUE ~ "NA"),
+           consensus = case_when(count == mode ~ "mode",
+                                 count >= max(count)-20 ~ "max",
                                 TRUE ~ "NA")) %>% 
     ungroup()
 }) -> df_subset
