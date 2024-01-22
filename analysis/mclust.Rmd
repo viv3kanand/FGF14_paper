@@ -169,7 +169,7 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
 
 
 
-# subset fastq id for fetching sequence
+# subset fastq id for fetching sequence based on mode
 lapply(df_subset, function(df){
   name <- df$id %>% unique()
   
@@ -181,8 +181,24 @@ lapply(df_subset, function(df){
     filter(allele_ref == "allele_2" & consensus == "mode") %>% 
     select(ID)
   
-  write_csv(df_a1, file = paste0("results/A1/", name))
-  write_csv(df_a2, file = paste0("results/A2/", name))
+  write_csv(df_a1, file = paste0("results/mode/A1/", name))
+  write_csv(df_a2, file = paste0("results/mode/A2/", name))
+})
+
+# subset fastq id for fetching sequence based on flanking
+lapply(df_subset, function(df){
+  name <- df$id %>% unique()
+  
+  df_a1 <- df %>% 
+    filter(allele_ref == "allele_1" & flanking %in% c("upstream", "downstream")) %>%
+    select(ID)
+  
+  df_a2 <- df %>% 
+    filter(allele_ref == "allele_2" & flanking %in% c("upstream", "downstream")) %>% 
+    select(ID)
+  
+  write_csv(df_a1, file = paste0("results/flanking/A1/", name))
+  write_csv(df_a2, file = paste0("results/flanking/A2/", name))
 })
 
 
