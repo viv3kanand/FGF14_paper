@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mclust) # For fitting GMM
 library(openxlsx)
+library(circlize)
 library(ComplexHeatmap)
 ### Evaluating clusters
 #renv::install("ramey/clusteval")
@@ -173,11 +174,11 @@ lapply(df_subset, function(df){
   name <- df$id %>% unique()
   
   df_a1 <- df %>% 
-    filter(allele_ref == "allele_1" & flanking %in% c("upstream", "downstream")) %>%
+    filter(allele_ref == "allele_1" & consensus == "mode") %>%
     select(ID)
   
   df_a2 <- df %>% 
-    filter(allele_ref == "allele_2" & flanking %in% c("upstream", "downstream")) %>% 
+    filter(allele_ref == "allele_2" & consensus == "mode") %>% 
     select(ID)
   
   write_csv(df_a1, file = paste0("results/A1/", name))
