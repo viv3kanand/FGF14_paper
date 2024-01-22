@@ -124,32 +124,37 @@ write.csv(result_mode, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
 
 ### Interruptions
 ```{r}
-clusters <- list(barcode13 = c(3,5),
-                 barcode14 = c(4,5),
-                 barcode15 = c(4,6),
-                 barcode25 = c(2,5),
-                 barcode26 = c(3,6),
-                 barcode27 = c(4,6),
-                 barcode37 = c(3,6),
-                 barcode38 = c(3,8),
-                 barcode39 = c(3,6),
-                 barcode49 = c(2,5),
-                 barcode50 = c(4,6),
-                 barcode51 = c(4,8),
-                 barcode61 = c(6,8),
-                 barcode62 = c(1,3),
-                 barcode63 = c(5),
-                 barcode73 = c(2,4),
-                 barcode74 = c(2,3),
-                 barcode75 = c(2,4),
-                 barcode85 = c(2,5),
-                 barcode87 = c(2,6))
+# omit barcode01 and barcode02 for not having enough read count to support downstream analysis
+
+clusters <- list(
+  barcode04 = c(3),
+  barcode13 = c(3,5),
+  barcode14 = c(4,5),
+  barcode15 = c(4,6),
+  barcode25 = c(2,5),
+  barcode26 = c(3,6),
+  barcode27 = c(4,6),
+  barcode37 = c(3,6),
+  barcode38 = c(3,8),
+  barcode39 = c(3,6),
+  barcode49 = c(2,5),
+  barcode50 = c(4,6),
+  barcode51 = c(4,8),
+  barcode61 = c(6,8),
+  barcode62 = c(1,3),
+  barcode63 = c(5),
+  barcode73 = c(2,4),
+  barcode74 = c(2,3),
+  barcode75 = c(2,4),
+  barcode85 = c(2,5),
+  barcode87 = c(2,6))
 
 # subset clusters from result_df with upstream and downstream from mode (+20 | -20)
 lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcode){
     result_df[names(clusters)][[barcode]] %>% 
     filter(allele %in% clusters[[barcode]]) %>% 
     group_by(allele) %>% 
+    arrange(count) %>% 
     mutate(allele_ref = paste0("allele_", cur_group_id()),
            mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
            flanking = case_when(count <= mode & count >= mode-20 ~ "upstream",
@@ -166,7 +171,7 @@ lapply(df_subset, function(df){
   name <- df$id %>% unique()
   
   df_a1 <- df %>% 
-    filter(allele_ref == "allele_1" & flanking %in% c("upstream", "downstream")) %>% 
+    filter(allele_ref == "allele_1" & flanking %in% c("upstream", "downstream")) %>%
     select(ID)
   
   df_a2 <- df %>% 
@@ -179,10 +184,6 @@ lapply(df_subset, function(df){
 
 
 
-# subset special cases
-result_df[c("barcode01", "barcode02", "barcode03", "barcode04", "barcode86")]
-
-
 
 ```
 
@@ -193,10 +194,15 @@ result_df[c("barcode01", "barcode02", "barcode03", "barcode04", "barcode86")]
 lapply(df_subset, function(df){
   df %>% 
     group_by(id, allele_ref) %>% 
-    summarise(mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])), .groups = 'drop')
+    summarise(mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
+              freq = max(table(count)),
+              .groups = 'drop')
 }) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
-  pivot_wider(names_from = allele_ref, values_from = mode) -> mode_df
+  pivot_wider(names_from = allele_ref, values_from = c(mode, freq)) -> mode_df
+
+
+
 
 
 df_merged <- df_subset %>% Reduce(function(...) merge(..., all=T), .)
