@@ -90,8 +90,10 @@ lapply(setNames(seq_along(1:length(clusters)), names(clusters)), function(barcod
 
 
 saveRDS(df_subset, file = "results/RData/df_subset.RData")
+```
 
-
+### Write read ids to file
+```{r}
 # subset fastq id for fetching sequence based on mode
 lapply(df_subset, function(df){
   name <- df$id %>% unique()
