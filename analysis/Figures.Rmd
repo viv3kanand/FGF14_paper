@@ -29,9 +29,6 @@ lapply(df_subset, function(df){
   pivot_wider(names_from = allele_ref, values_from = c(mode, freq)) -> mode_df
 
 
-
-
-
 df_merged <- df_subset %>% Reduce(function(...) merge(..., all=T), .)
 
 
