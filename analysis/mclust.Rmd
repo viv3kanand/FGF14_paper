@@ -9,95 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Batch process STRique data
 ```{r}
-library(tidyverse)
-library(mclust) # For fitting GMM
-library(openxlsx)
-library(circlize)
-library(ComplexHeatmap)
-### Evaluating clusters
-#renv::install("ramey/clusteval")
-#renv::install("factoextra")
-```
-
-```{r}
-file1 <- "../data/out/barcode03.hg19.strique.tsv"
-file2 <- "../data/out/barcode86.hg19.strique.tsv"
-
-df1 <- read.table(file1, header = TRUE)
-df2 <- read.table(file2, header = TRUE)
-
-df <- rbind(df1,df2)
-
-#file <- "../data/out/barcode02.hg19.strique.tsv"
-#df <- read.table(file, header = TRUE)
-
-df %>% filter(count > 3 & score_prefix >= 4 & score_suffix >= 4) -> df
-set.seed(666)
-fit <- Mclust(df$count)
-
-prob <- predict(fit)
-
-df$allele <- apply(prob$z, 1, which.max)
-df$id <- str_remove(basename(file), ".hg19.strique.tsv")
-
-mode_df <- df %>%
-    group_by(id, allele) %>%
-    summarise(allele_freq = n(),
-              mode_repeat = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
-              repeat_freq = max(table(count)),
-              prop = repeat_freq/allele_freq)
-
-mode_df %>% arrange(allele_freq)
-
-
-```
-
-
-```{r}
-ggplot(df, aes(x = count, fill = factor(allele))) +
-    geom_density(alpha = 0.5) +
-    scale_fill_manual(values = c("red", "blue", "green")) +
-    theme_minimal() +
-    geom_vline(xintercept = c(mode_df$mode_repeat[2], mode_df$mode_repeat[3]), linetype = "dashed")
-```
-
-
-
-```{r}
-FGF14 <- read.csv("../data/FGF14-sample data.csv")
+source("../scripts/GMM.R")
 
 file_paths <- list.files("../data/out/", full.names = TRUE)
-
-result_df <- data.frame()
-
-process_file <- function(file_path) {
-  df <- read.table(file_path, header = TRUE)
-  
-  df_filtered <- df %>%
-    filter(count > 3, score_prefix >= 4, score_suffix >= 4) %>% 
-    mutate(id = str_remove(basename(file_path), ".hg19.strique.tsv"))
-  
-  set.seed(666)
-  
-  fit <- Mclust(df_filtered$count)
-  prob <- predict(fit)
-  
-  df_filtered$allele <- apply(prob$z, 1, which.max)
-  
-  mode_df <- df_filtered %>%
-    group_by(id, allele) %>%
-    summarise(
-      allele_freq = n(),
-      mode_repeat = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
-      repeat_freq = max(table(count)),
-      prop = repeat_freq/allele_freq,
-      .groups = 'drop'
-    ) %>% 
-    arrange(desc(allele_freq))
-
-  return(list(mode = mode_df, df = df_filtered))
-}
 
 result_list <- lapply(
   setNames(file_paths, str_remove(basename(file_paths), ".hg19.strique.tsv")), 
@@ -106,25 +22,24 @@ result_list <- lapply(
     return(process_result)
 })
 
-result_df <- lapply(result_list, function(result) result$df)
-
-
 result_mode <- lapply(result_list, function(result) result$mode) %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
   pivot_wider(names_from = allele, values_from = c(mode_repeat, repeat_freq, allele_freq, prop))
 
 
+FGF14 <- read.csv("../data/FGF14-sample data.csv")
 result_mode <- merge(FGF14, result_mode, by.x = "barcode", by.y = "id")
 
 
 write.csv(result_mode, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
-
 
 ```
 
 
 ### Interruptions
 ```{r}
+result_df <- lapply(result_list, function(result) result$df)
+
 # omit barcode01 and barcode02 for not having enough read count to support downstream analysis
 
 clusters <- list(
