@@ -247,7 +247,11 @@ mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE)
 
 mat <- mat[,order(as.numeric(as.character(colnames(mat))))]
 
-col_fun = colorRamp2(c(-2, 5), c("white", "red"))
+myCol <- colorRampPalette(c('black','white', 'red'))(50)
+myBreaks <- seq(-3, 3, length.out = 50)
+col_fun <- colorRamp2(myBreaks, myCol)
+
+#col_fun <- colorRamp2(c(-2, 5), c("white", "red"))
 
 num_bins = 50
 ha = columnAnnotation(
@@ -277,6 +281,7 @@ heatmap <- ComplexHeatmap::Heatmap(mat,
                                    row_names_side = "left",
                                    show_row_names = TRUE,
                                    show_column_names = FALSE,
+                                   border_gp = gpar(col = "black", lwd = 1),
                                    name = "z-score")
 
 
