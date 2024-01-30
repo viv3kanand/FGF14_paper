@@ -1,0 +1,102 @@
+---
+title: "Figures"
+author: "viv3kanand"
+date: "2024-01-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### load data for processing
+```{r}
+df_subset <- readRDS("results/RData/df_subset.RData")
+result_list <- readRDS("results/RData/result_list.RData")
+```
+
+### Density plot
+```{r}
+# summary of the cluster distribution
+lapply(df_subset, function(df){
+  df %>% 
+    group_by(id, allele_ref) %>% 
+    summarise(mode = as.numeric(names(sort(table(count), decreasing = TRUE)[1])),
+              freq = max(table(count)),
+              .groups = 'drop')
+}) %>% 
+  Reduce(function(...) merge(..., all=T), .) %>% 
+  pivot_wider(names_from = allele_ref, values_from = c(mode, freq)) -> mode_df
+
+
+
+
+
+df_merged <- df_subset %>% Reduce(function(...) merge(..., all=T), .)
+
+
+ggplot(df_merged, aes(x = count, fill = factor(allele_ref))) +
+    geom_density(alpha = 0.5) +
+    scale_fill_manual(values = c("red", "blue")) +
+    theme_minimal() + 
+    facet_wrap(~id, scales = "free")
+```
+
+### Heatmap
+```{r}
+result_df <- lapply(result_list, function(result) result$df)
+
+# Heatmap of all clusters
+heatmap_dat <- result_df %>% 
+  Reduce(function(...) merge(..., all=T), .) %>% 
+  group_by(id, count) %>%
+  summarise(freq = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = count, values_from = freq) %>% 
+  tibble::column_to_rownames("id")
+
+mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)))
+
+mat <- mat[,order(as.numeric(as.character(colnames(mat))))]
+
+myCol <- colorRampPalette(c('black','white', 'red'))(50)
+myBreaks <- seq(-3, 3, length.out = 50)
+col_fun <- colorRamp2(myBreaks, myCol)
+
+#col_fun <- colorRamp2(c(-2, 5), c("white", "red"))
+
+num_bins = 50
+ha = columnAnnotation(
+  foo = anno_mark(
+    at = seq(1, ncol(mat) + num_bins, by = num_bins),
+    labels = colnames(mat)[seq(1, ncol(mat) + num_bins, by = num_bins)]))
+
+# breaks <- mode_df %>%
+#   pivot_longer(cols = c("allele_1", "allele_2")) %>%
+#   pull(value) %>%
+#   sort %>%
+#   unique()
+
+# ha =columnAnnotation(foo = anno_mark(
+#   at = c(10,25,60,85,112,123,137,246,270,295,321,366,404,428), 
+#   labels = c(10,25,60,85,112,123,137,246,270,295,321,366,404,428)))
+
+
+heatmap <- ComplexHeatmap::Heatmap(mat,
+                                   na_col = "white",
+                                   cluster_rows = FALSE, 
+                                   cluster_columns = FALSE,
+                                   col = col_fun,
+                                   top_annotation = ha,
+                                   row_split = 1:25,
+                                   row_title = NULL,
+                                   row_names_side = "left",
+                                   show_row_names = TRUE,
+                                   show_column_names = FALSE,
+                                   border_gp = gpar(col = "black", lwd = 1),
+                                   name = "z-score")
+
+
+png("figures/heatmap.png", width = 10, height = 8, units = "in", res = 300)
+draw(heatmap)
+dev.off()
+```
