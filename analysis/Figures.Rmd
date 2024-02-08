@@ -9,10 +9,18 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Load packages
+```{r}
+require(tidyverse)
+require(ComplexHeatmap)
+require(circlize)
+```
+
 ### load data for processing
 ```{r}
 df_subset <- readRDS("results/RData/df_subset.RData")
 result_list <- readRDS("results/RData/result_list.RData")
+result_mode <- readRDS("results/RData/result_mode.RData")
 ```
 
 ### Density plot
@@ -43,7 +51,7 @@ ggplot(df_merged, aes(x = count, fill = factor(allele_ref))) +
 ```{r}
 result_df <- lapply(result_list, function(result) result$df)
 
-# Heatmap of all clusters
+# Transform data to matrix with repeat vs frequency
 heatmap_dat <- result_df %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
   group_by(id, count) %>%
@@ -54,6 +62,8 @@ heatmap_dat <- result_df %>%
 mat <- t(apply(as.matrix(heatmap_dat), 1, function(x) (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)))
 
 mat <- mat[,order(as.numeric(as.character(colnames(mat))))]
+
+rownames(mat) <- result_mode$SAMPLE.ID[match(rownames(mat), result_mode$barcode)] #annotate with sampleID
 
 myCol <- colorRampPalette(c('black','white', 'red'))(50)
 myBreaks <- seq(-3, 3, length.out = 50)

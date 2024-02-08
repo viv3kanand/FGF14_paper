@@ -9,6 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## load packages
+```{r}
+require(tidyverse)
+```
+
 ## Batch process STRique data
 ```{r}
 source("../scripts/GMM.R")
@@ -36,6 +41,7 @@ result_mode <- lapply(result_list, function(result) result$mode) %>%
 FGF14 <- read.csv("../data/FGF14-sample data.csv")
 result_mode <- merge(FGF14, result_mode, by.x = "barcode", by.y = "id")
 
+saveRDS(result_mode, file = "results/RData/result_mode.RData")
 
 write.csv(result_mode, paste0("results/", Sys.Date(), "_FGF14_result.csv"))
 

@@ -1,6 +1,6 @@
 process_file <- function(file_path) {
-  library(tidyverse)
-  library(mclust) # For fitting GMM
+  require(tidyverse)
+  require(mclust) # For fitting GMM
   
   df <- read.table(file_path, header = TRUE)
   
