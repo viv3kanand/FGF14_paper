@@ -51,6 +51,8 @@ ggplot(df_merged, aes(x = count, fill = factor(allele_ref))) +
 ```{r}
 result_df <- lapply(result_list, function(result) result$df)
 
+result_df$barcode86 <- NULL
+
 # Transform data to matrix with repeat vs frequency
 heatmap_dat <- result_df %>% 
   Reduce(function(...) merge(..., all=T), .) %>% 
